@@ -118,7 +118,9 @@ function nightCard(ctx) {
   if (!day || !day.hasNight) return null;
   const times = day.sleepStart != null ? `${clock(day.sleepStart, day.offset)} 就寝 → ${clock(day.sleepEnd, day.offset)} 起床` : '';
   const debt = result.sleep.debt;
-  const sleepNote = h('div', { class: 'note' }, h('span', null, times));
+  // 「睡眠時間」は眠っていた時間（覚醒を除く）。SOXAI アプリの表示と見比べやすいよう、ベッドにいた時間も並べる
+  const inBed = day.v.sleep_time_in_bed > 0 ? `ベッドに ${fmtMinutes(day.v.sleep_time_in_bed)}` : null;
+  const sleepNote = h('div', { class: 'note' }, h('span', null, times), inBed ? h('span', null, inBed) : null);
   if (debt.status === 'ok') sleepNote.append(chip(`睡眠負債 ${debt.label}${debt.minutes ? `（${fmtMinutes(debt.minutes)}）` : ''}`, debt.band === 'high' ? 'warn' : ''));
   else sleepNote.append(h('span', { class: 'muted' }, `睡眠負債は、あと${debt.needed - debt.nights}夜分たまると表示されます`));
   // 体調の変化のカードが出ていない日は、飲酒の印の一言をここに添える
