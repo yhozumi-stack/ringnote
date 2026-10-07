@@ -2,7 +2,7 @@
 //
 // 2つのまとまりがある。どちらも「今朝の日付」の1件の記録に保存する（今朝の日付 = 昨夜の睡眠記録の日付）。
 // - 今日の状態（今朝のこと）: 体調・疲労感・筋肉痛・風邪っぽい症状
-// - 前日・昨夜の行動（昨夜の睡眠記録に紐付ける）: 昨日の精神的ストレス・飲酒・前日の筋トレ負荷・カフェイン・IQOS
+// - 前日・昨夜の行動（昨夜の睡眠記録に紐付ける）: 昨日の精神的ストレス・飲酒・前日の筋トレ負荷（と終えた時刻）・カフェイン・IQOS
 //
 // 決まり:
 // - 「未入力」は独立した状態。押していない項目は、記録にキーを持たせない。「なし」「普通」「0杯」とはみなさない。
@@ -81,6 +81,8 @@ export function sanitizeSubjective(raw) {
   // 最後に摂った時刻は、摂った日だけ意味がある
   if (hadCaffeine(out) && typeof raw.caffeineLast === 'string' && TIME_RE.test(raw.caffeineLast)) out.caffeineLast = raw.caffeineLast;
   if ((out.iqos ?? 0) > 0 && typeof raw.iqosLast === 'string' && TIME_RE.test(raw.iqosLast)) out.iqosLast = raw.iqosLast;
+  // 筋トレを終えた時刻は、筋トレをした日（負荷が「なし」以外）だけ意味がある
+  if (out.training && out.training !== 'none' && typeof raw.trainingEnd === 'string' && TIME_RE.test(raw.trainingEnd)) out.trainingEnd = raw.trainingEnd;
   return Object.keys(out).length ? out : null;
 }
 
@@ -95,7 +97,7 @@ export function missingFields(record, group) {
 }
 
 /**
- * 「最後に○○した時刻」（エポックミリ秒）。key は 'caffeineLast' か 'iqosLast'。
+ * 「最後に○○した時刻」（エポックミリ秒）。key は 'caffeineLast'・'iqosLast'・'trainingEnd'。
  * 入力は時刻だけなので、昨夜の就寝より前で、いちばん遅い時刻として読む（0時を過ぎてからの場合にも対応）。
  * 就寝時刻が分からない日や、時刻が未入力の日は null。
  */
@@ -173,6 +175,24 @@ export function iqosGapBand(day, cfg = CONFIG) {
   if (s.iqos === 0) return 'zero';
   const gap = iqosGapMin(day);
   return gap == null ? null : cfg.lifelog.iqosGapBands.find((b) => gap <= b.within).key;
+}
+
+/** 筋トレを終えてから就寝までの時間（分）。分からなければ null */
+export function trainingGapMin(day) {
+  const at = lastTimeAt(day, 'trainingEnd');
+  return at == null ? null : Math.max(0, Math.round((day.sleepStart - at) / 60000));
+}
+
+/**
+ * 筋トレを終えた時刻の区分（就寝時刻との差で自動計算）。筋トレをしなかった日は 'zero'。
+ * 負荷が未入力の日と、筋トレをしたが時刻が分からない日は null（どの区分にも入れない）。
+ */
+export function trainingGapBand(day, cfg = CONFIG) {
+  const s = day && day.subjective;
+  if (!s || s.training == null) return null;
+  if (s.training === 'none') return 'zero';
+  const gap = trainingGapMin(day);
+  return gap == null ? null : cfg.lifelog.trainingGapBands.find((b) => gap <= b.within).key;
 }
 
 /**

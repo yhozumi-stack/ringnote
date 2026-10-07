@@ -146,13 +146,14 @@ function summaryText(group, cur) {
   const parts = fieldsOf(group).filter((k) => cur[k] != null).map((k) => `${SHORT[k] || SUBJECTIVE_FIELDS[k].label} ${optionLabel(k, cur[k], { long: true })}`);
   if (group === 'behavior' && cur.caffeineLast) parts.push(`最後のカフェイン ${cur.caffeineLast}`);
   if (group === 'behavior' && cur.iqosLast) parts.push(`最後の IQOS ${cur.iqosLast}`);
+  if (group === 'behavior' && cur.trainingEnd) parts.push(`筋トレ終了 ${cur.trainingEnd}`);
   return parts.length ? parts.join('・') : 'まだ入力していません';
 }
 
 // 入力の途中で描き直さないよう、入力欄を選んでいる間は描き直しを止める印を付ける（main.js の render を参照）
 const HOLD = { holdRender: '1' };
 
-/** 時刻を入れる行（最後にカフェインを摂った時刻、最後に IQOS を吸った時刻） */
+/** 時刻を入れる行（最後にカフェインを摂った時刻、最後に IQOS を吸った時刻、筋トレを終えた時刻） */
 function timeRow(ctx, cur, field, label, aria) {
   const input = h('input', { type: 'time', class: 'timeinput', value: cur[field] || null, 'aria-label': aria, dataset: HOLD });
   input.addEventListener('change', () => ctx.actions.setLifeValue(ctx.date, field, input.value));
@@ -236,6 +237,7 @@ function lifelogRows(ctx, group, cur) {
       if (mg) rows.push(h('p', { class: 'subjnote' }, `エナジードリンクのカフェインは約${mg}mg（1本120mgで換算）`));
     }
     if (field === 'iqos' && cur.iqos > 0) rows.push(timeRow(ctx, cur, 'iqosLast', '最後に吸った時刻', '最後に IQOS を吸った時刻'));
+    if (field === 'training' && cur.training && cur.training !== 'none') rows.push(timeRow(ctx, cur, 'trainingEnd', '終えた時刻（任意）', '筋トレを終えた時刻'));
   }
   return rows;
 }

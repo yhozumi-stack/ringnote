@@ -50,6 +50,7 @@ export function exportLifelogJson(map, { exportedAt = null, timezone = null, utc
     coldSymptoms: COLD_SYMPTOMS.map(([value, label]) => ({ value, label })),
     caffeineLast: '最後にカフェインを摂った時刻（HH:MM）',
     iqosLast: '最後に IQOS を吸った時刻（HH:MM）',
+    trainingEnd: '筋トレを終えた時刻（HH:MM）。筋トレ負荷が「なし」以外の日だけ',
     days: cleanDays(map),
   }, null, 1);
 }
@@ -62,7 +63,7 @@ function csvCell(v) {
 /** CSV で書き出す（表計算ソフトで文字化けしないよう、先頭に BOM を付ける）。値は日本語の表記 */
 export function exportLifelogCsv(map) {
   const symptomLabel = new Map(COLD_SYMPTOMS);
-  const header = ['日付', ...FIELD_KEYS.map((k) => SUBJECTIVE_FIELDS[k].label), '症状の内容', '最後にカフェインを摂った時刻', 'エナジードリンクのカフェイン量(mg)', '最後に IQOS を吸った時刻'];
+  const header = ['日付', ...FIELD_KEYS.map((k) => SUBJECTIVE_FIELDS[k].label), '症状の内容', '最後にカフェインを摂った時刻', 'エナジードリンクのカフェイン量(mg)', '最後に IQOS を吸った時刻', '筋トレを終えた時刻'];
   const lines = [header.map(csvCell).join(',')];
   for (const day of cleanDays(map)) {
     lines.push([
@@ -72,6 +73,7 @@ export function exportLifelogCsv(map) {
       day.caffeineLast || '',
       energyCaffeineMg(day) ?? '',
       day.iqosLast || '',
+      day.trainingEnd || '',
     ].map(csvCell).join(','));
   }
   return `﻿${lines.join('\r\n')}\r\n`;

@@ -229,7 +229,7 @@ function coldCard(ctx) {
 function insightsCard(ctx) {
   const range = { from: insightDays ? addDays(ctx.date, -(insightDays - 1)) : null, upTo: ctx.date };
   const byKey = new Map(COMPARISONS.map((c) => [c.key, c]));
-  const order = ['alcohol', 'coffee', 'energy', 'caffeineLast', 'iqos', 'iqosRelative', 'iqosLast', 'training', 'mental', 'badDay', 'conditionScore', 'fatigueScore', 'coldDetect', 'badDetect'];
+  const order = ['alcohol', 'coffee', 'energy', 'caffeineLast', 'iqos', 'iqosRelative', 'iqosLast', 'training', 'trainingEnd', 'mental', 'badDay', 'conditionScore', 'fatigueScore', 'coldDetect', 'badDetect'];
   const folds = order.map((key) => comparisonFold(ctx, byKey.get(key), range));
   ctx.mount(() => folds.forEach((f) => f.fillIfOpen()));
   const pick = segmented('集計する期間', [[30, '30日'], [60, '60日'], [90, '90日'], [0, '全期間']], insightDays, (v) => { insightDays = v; ctx.rerender(); });

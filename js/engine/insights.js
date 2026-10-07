@@ -7,7 +7,7 @@
 
 import { CONFIG } from './config.js';
 import { addDays, diffDays, median } from './util.js';
-import { noCaffeine, caffeineTimeBand, countBand, iqosCountBand, iqosGapBand, iqosRelativeBand } from './subjective.js';
+import { noCaffeine, caffeineTimeBand, countBand, iqosCountBand, iqosGapBand, iqosRelativeBand, trainingGapBand } from './subjective.js';
 
 const dev = (r, key) => (r.metrics[key] && r.metrics[key].dev) || null;
 const diffOf = (key) => (r) => { const d = dev(r, key); return d ? d.diff : null; };
@@ -70,6 +70,9 @@ export const COMPARISONS = [
     pick: (d, cfg) => { const b = iqosGapBand(d, cfg); return b ? [b] : null; } },
   { key: 'training', title: '前日の筋トレ負荷', outcomes: ['hrv', 'hr', 'fatigueHigh', 'sorenessHigh'],
     groups: [['none', 'なし'], ['light', '軽い'], ['normal', '普通'], ['hard', '強い']], pick: byValue('training') },
+  { key: 'trainingEnd', title: '筋トレを終えた時刻', outcomes: ['latency', 'hr', 'hrv', 'temp', 'sleep', 'eff'],
+    groups: [['zero', 'しなかった'], ...CONFIG.lifelog.trainingGapBands.map((b) => [b.key, b.label])],
+    pick: (d, cfg) => { const b = trainingGapBand(d, cfg); return b ? [b] : null; } },
   { key: 'mental', title: '昨日の精神的ストレス', outcomes: ['soxaiStressPrev', 'hrv', 'latency', 'sleep', 'eff'],
     groups: [['low', '低い'], ['normal', '普通'], ['high', '高い']], pick: byValue('mental') },
   { key: 'badDay', title: '体調が「悪い」日に動いていた指標', outcomes: ['hrv', 'hr', 'temp', 'resp', 'spo2', 'sleep', 'eff'],

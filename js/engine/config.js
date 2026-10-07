@@ -223,6 +223,12 @@ export const CONFIG = {
       { key: 'within2h', label: '就寝1〜2時間前', within: 120 },
       { key: 'earlier', label: 'それより前', within: Infinity },
     ],
+    // 筋トレを終えた時刻の区分（就寝までの時間。分）
+    trainingGapBands: [
+      { key: 'within2h', label: '就寝2時間以内', within: 120 },
+      { key: 'within4h', label: '就寝2〜4時間前', within: 240 },
+      { key: 'earlier', label: 'それより前', within: Infinity },
+    ],
   },
 
   // ---- 5.6 iPhone の中の、5分ごとの生データの保管 ----

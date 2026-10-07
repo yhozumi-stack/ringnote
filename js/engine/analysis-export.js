@@ -10,7 +10,7 @@
 // 5分ごとのデータは量が多いので、別のファイルにする（buildDetailExport）。
 
 import { CONFIG } from './config.js';
-import { SUBJECTIVE_FIELDS, COLD_SYMPTOMS, sanitizeSubjective, energyCaffeineMg, lastTimeAt, iqosGapMin } from './subjective.js';
+import { SUBJECTIVE_FIELDS, COLD_SYMPTOMS, sanitizeSubjective, energyCaffeineMg, lastTimeAt, iqosGapMin, trainingGapMin } from './subjective.js';
 import { DAILY_FIELDS, DETAIL_FIELDS } from './fields.js';
 
 export const ANALYSIS_FORMAT = 'ringnote-analysis';
@@ -53,6 +53,8 @@ function dayBlock(date, raw, day, r, record, night) {
       caffeine_last_at: iso(lastTimeAt(day, 'caffeineLast')),
       iqos_last_at: iso(lastTimeAt(day, 'iqosLast')),
       iqos_minutes_before_sleep: iqosGapMin(day),
+      training_end_at: iso(lastTimeAt(day, 'trainingEnd')),
+      training_minutes_before_sleep: trainingGapMin(day),
     } : null,
     learning_stage: r.stage.key, baseline_nights: r.stage.nights,
     confidence: { level: r.confidence.level, reasons: r.confidence.reasons },
@@ -129,7 +131,7 @@ export function analysisExportCsv(exp) {
   const rawKeys = new Set();
   for (const d of exp.days) for (const k of Object.keys(d.soxai_daily || {})) rawKeys.add(k);
   const raws = [...rawKeys].sort();
-  const life = [...Object.keys(SUBJECTIVE_FIELDS), 'coldSymptoms', 'caffeineLast', 'iqosLast'];
+  const life = [...Object.keys(SUBJECTIVE_FIELDS), 'coldSymptoms', 'caffeineLast', 'iqosLast', 'trainingEnd'];
   const metricKeys = Object.keys(exp.dictionary.metrics);
   const header = ['date', ...raws.map((k) => `soxai_${k}`), ...life.map((k) => `lifelog_${k}`),
     'night_class', 'baseline_eligible', 'night_skin_temp_median', 'night_odi_mean', 'min_hr_position', 'iqos_minutes_before_sleep', 'energy_caffeine_mg',
