@@ -14,7 +14,7 @@ import { APP_VERSION } from './config.js';
 import { addDays, diffDays, todayStr, isoWithOffset, localMidnightMs } from './ui.js';
 import { prepareDays, analyzeAll, nightFeatures, normalizeDaily, normalizeEpochs, CONFIG,
   awakeEpochs, stressDayStats, stressAnalysis, sanitizeSubjective,
-  exportLifelogJson, exportLifelogCsv, parseLifelog, mergeLifelog,
+  exportLifelogJson, exportLifelogCsv, parseLifelog, mergeLifelog, backupReminder,
   buildAnalysisExport, analysisExportCsv, buildDetailExport, archiveNeedsRefetch, decideArchiveUpdate } from './engine/index.js';
 import { demoDaily, demoNights, demoDetail, demoSubjective } from './demo.js';
 
@@ -564,6 +564,15 @@ export function markLifelogExported() {
 }
 
 /** 最後の書き出しより後に、入力した日が何日増えたか。一度も書き出していなければ null */
+/** 記録のバックアップを、今日の画面で知らせるかどうか（知らせない時は null。デモ表示中は知らせない） */
+export function backupNotice(now = Date.now()) {
+  if (state.demo) return null;
+  const last = state.prefs.lastExport;
+  const first = Object.keys(state.subjective).sort()[0];
+  return backupReminder({ lastExportAt: last ? last.at : null, exportedDays: last ? (last.days || 0) : 0, inputDays: inputDays(),
+    firstInputAt: first ? new Date(`${first}T00:00:00`).getTime() : null, now });
+}
+
 export function daysSinceExport() {
   const last = state.prefs.lastExport;
   if (!last) return null;

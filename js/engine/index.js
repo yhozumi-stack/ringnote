@@ -25,7 +25,7 @@ export { awakeEpochs, stressDayStats, stressAnalysis } from './stress.js';
 export { DAILY_FIELDS, DETAIL_FIELDS } from './fields.js';
 export { SUBJECTIVE_FIELDS, FIELD_GROUPS, COLD_SYMPTOMS, optionLabel, sanitizeSubjective, fieldsOf, missingFields, hadCaffeine, energyCaffeineMg, lastCaffeineAt, lastTimeAt, iqosGapMin, iqosGapBand, iqosRelativeBand, iqosInputDays, countBand } from './subjective.js';
 export { OUTCOMES, COMPARISONS, groupCompare, allComparisons, coldEpisodes, sampleLevel } from './insights.js';
-export { exportLifelogJson, exportLifelogCsv, parseLifelog, mergeLifelog } from './lifelog-io.js';
+export { exportLifelogJson, exportLifelogCsv, parseLifelog, mergeLifelog, backupReminder } from './lifelog-io.js';
 export { buildAnalysisExport, analysisExportCsv, buildDetailExport } from './analysis-export.js';
 export { archiveNeedsRefetch, decideArchiveUpdate } from './archive-policy.js';
 

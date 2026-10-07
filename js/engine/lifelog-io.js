@@ -5,6 +5,7 @@
 // - CSV: 表計算ソフトで見る用。1行が1日。未入力は空欄
 
 import { SUBJECTIVE_FIELDS, COLD_SYMPTOMS, sanitizeSubjective, optionLabel, energyCaffeineMg } from './subjective.js';
+import { CONFIG } from './config.js';
 
 export const LIFELOG_FORMAT = 'ringnote-lifelog';
 // 版 2: コーヒーとエナジードリンクを実際の杯数・本数で持つ。精神的ストレスを「昨日」のものとして持つ。
@@ -127,4 +128,24 @@ export function mergeLifelog(current, incoming) {
     merged[date] = after;
   }
   return { merged, added, updated, unchanged };
+}
+
+/**
+ * 記録のバックアップの書き出しを、今日の画面で知らせるかどうか。
+ * 書き出しは毎回「全部の記録」を1つのファイルにする（前回からの差分ではない）ので、見るのは
+ * 「前回の書き出しの後に、新しく入力した日があるか」と「前回から何日たったか」だけ。
+ * - 前回の書き出しの後に入力した日が無ければ、知らせない（守るものが増えていない）。
+ * - 一度も書き出していない時は、最初に入力した日から数える。
+ * @param {{lastExportAt:number|null, exportedDays:number, inputDays:number, firstInputAt:number|null, now:number}} s
+ *   exportedDays: 前回書き出した時点の「記録のある日」の数 / inputDays: いまの数 / 時刻はエポックミリ秒
+ * @returns {null | {days:number, unsaved:number, never:boolean}}
+ */
+export function backupReminder({ lastExportAt = null, exportedDays = 0, inputDays = 0, firstInputAt = null, now }, cfg = CONFIG) {
+  const never = lastExportAt == null;
+  const unsaved = Math.max(0, inputDays - (never ? 0 : exportedDays));
+  if (!unsaved) return null;
+  const from = never ? firstInputAt : lastExportAt;
+  if (from == null || !(now >= from)) return null;
+  const days = Math.floor((now - from) / 86400000);
+  return days >= cfg.lifelog.backupRemindDays ? { days, unsaved, never } : null;
 }

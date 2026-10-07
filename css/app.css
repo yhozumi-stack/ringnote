@@ -704,3 +704,7 @@ a.btn { display: block; text-align: center; text-decoration: none; line-height: 
 #logout-confirm .kv.backupline { border-top: 1px solid var(--grid); padding-top: 10px; }
 #logout-confirm .kv.backupline dd { font-weight: 600; }
 #logout-confirm .line { font-weight: 400; font-size: 14px; color: var(--ink-2); margin-top: 0; }
+
+/* 記録のバックアップのお知らせ（今日の画面）。控えめに。文は左、押す場所は右（指で押せる大きさを保つ） */
+.backupnote { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--border); }
+.backupnote .linkbtn { flex: none; text-decoration: underline; }

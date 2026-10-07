@@ -177,6 +177,7 @@ export const CONFIG = {
 
   // ---- 5.3 主観入力・生活ログ ----
   lifelog: {
+    backupRemindDays: 7,       // 記録のバックアップを、この日数書き出していなければ、今日の画面で小さく知らせる
     energyMgPerCan: 120,       // エナジードリンク1本のカフェイン量（100mL あたり 48mg、250mL）
     // 最後にカフェインを摂った時刻の区分（前日の0時から数えた時刻。before 未満がその区分）
     caffeineBands: [

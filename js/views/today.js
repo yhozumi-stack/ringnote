@@ -7,6 +7,7 @@ import { h, clock, fmtMinutes } from '../ui.js';
 import { ring } from '../charts.js';
 import { SUBJECTIVE_FIELDS, FIELD_GROUPS, COLD_SYMPTOMS, optionLabel, fieldsOf, missingFields, hadCaffeine, energyCaffeineMg } from '../engine/index.js';
 import { card, chip, segmented } from './parts.js';
+import * as data from '../data.js';
 import { metricRow } from './metrics.js';
 
 // SOXAI アプリを直接開く方法は公開されていないので、App Store の SOXAI RING のページを開く（そこから「開く」を押せる）
@@ -253,7 +254,20 @@ function lifelogCard(ctx) {
   const cur = ctx.state.subjective[ctx.date] || {};
   return card(ctx.date === ctx.today ? '今日の記録（任意）' : 'この日の記録（任意）',
     '押していない項目は「未入力」のままで、比較には使いません。どの項目も点数には混ぜません。この端末にだけ保存されます。',
-    h('div', { class: 'subj' }, FIELD_GROUPS.map((g) => lifelogSection(ctx, g, cur))));
+    h('div', { class: 'subj' }, FIELD_GROUPS.map((g) => lifelogSection(ctx, g, cur))),
+    backupNote(ctx));
+}
+
+// 記録のバックアップを、しばらく書き出していない時の小さなお知らせ（今日の画面だけ。設計書 5.5）
+function backupNote(ctx) {
+  if (ctx.date !== ctx.today) return null;
+  const n = data.backupNotice();
+  if (!n) return null;
+  const text = n.never
+    ? `記録のバックアップがまだありません（入力 ${n.unsaved}日分）。`
+    : `最後のバックアップから ${n.days}日（その後 ${n.unsaved}日分を入力）。`;
+  return h('p', { class: 'explain backupnote' }, h('span', null, text),
+    h('button', { class: 'linkbtn', type: 'button', onclick: () => ctx.go('settings') }, '設定で書き出す'));
 }
 
 export function todayView(ctx) {
