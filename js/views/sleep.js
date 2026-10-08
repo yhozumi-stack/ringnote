@@ -2,15 +2,14 @@
 // 情報が多いので、細かい部分（内訳と自分比、呼吸のこの夜の推移）は折りたたんでおく。
 // 計算はしない。日次の値と分析エンジンの結果、5分ごとの記録をそのまま描く。
 //
-// 「睡眠時の呼吸」について: SOXAI の公式の説明では、睡眠中の血中酸素の低下イベントが1時間あたり何回あったかをもとに、
-// 4段階（平常・許容範囲・乱れあり・大きな乱れ）で評価している。ただし、その4段階そのものは API では届かない。
-// 届くのは sleep_ahi_class（日次）と sleep_odi（5分ごと）で、これらが4段階のどれに、どう対応するかは照合中（設計書 5.1）。
-// 確認できるまでは、届いた値をそのまま載せるだけにする。段階への読み替え・回数（1時間あたり、一晩の合計、
-// いちばん多かった1時間）への換算・良し悪しの判定・診断につながる言葉は書かない。
+// 「睡眠時の呼吸」について: SOXAI アプリの「睡眠時無呼吸の傾向」は、睡眠中に血中酸素が下がった回数をもとにした評価。
+// 日次の sleep_ahi_class に、アプリ内の説明にある目安を当てはめると、アプリの表示と一致する（3夜分で確認。engine/breathing.js）。
+// ここでは、届いた値と、その区分を出す。5分ごとの sleep_odi を足した回数（一晩の合計、1時間あたり、いちばん多かった1時間）は
+// 段階と合わない夜があったので、指標としては出さない。診断につながる言葉は書かない。
 
 import { h, clock, fmtMinutes, fmtHM, fmtInt, fmtNum, shortDate, weekdayOf } from '../ui.js';
 import { ring, lineChart, hypnogram, columnChart } from '../charts.js';
-import { STAGE_NAMES, STAGE_LABELS } from '../engine/index.js';
+import { STAGE_NAMES, STAGE_LABELS, CONFIG, soxaiBreathingBand } from '../engine/index.js';
 import { card, chip, chartCard, miniChart, statTile, fold, lastDates, indexTicks, dateTicks, hourTicks, asyncBox } from './parts.js';
 import { metricRow, plainRow } from './metrics.js';
 
@@ -205,6 +204,11 @@ function renderBreathNight(box, night) {
   }
 }
 
+// SOXAI の目安の「許容範囲」（グラフの帯に使う）と、目安の説明文
+const BREATH_BANDS = CONFIG.breathing.soxaiBands;
+const BREATH_OK = { lo: BREATH_BANDS[1].below, hi: BREATH_BANDS[2].below };
+const BREATH_NOTE = `2未満が「${BREATH_BANDS[0].label}」、${BREATH_BANDS[0].below}〜${BREATH_BANDS[1].below}未満が「${BREATH_BANDS[1].label}」、${BREATH_BANDS[1].below}〜${BREATH_BANDS[2].below}未満が「${BREATH_BANDS[2].label}」、${BREATH_BANDS[2].below}以上が「${BREATH_BANDS[3].label}」`;
+
 function breathTrend(box, ctx) {
   const dates = lastDates(ctx.date, BREATH_NIGHTS);
   const dayOf = (d) => { const x = ctx.state.days.get(d); return x && x.hasNight ? x : null; };
@@ -212,7 +216,7 @@ function breathTrend(box, ctx) {
     { label: '血中酸素の平均', unit: '%', digits: 1, key: 'spo2', get: (x) => x.v.sleep_spo2_mean },
     { label: '呼吸数', unit: '回/分', digits: 1, key: 'resp', get: (x) => x.v.sleep_respiration_rate_mean },
     { label: '酸素低下の指標（夜間平均）', unit: '', digits: 1, key: 'odi', get: (x) => x.nightOdi },
-    { label: 'SOXAI の指標値（参考）', unit: '', digits: 0, key: null, get: (x) => x.v.sleep_ahi_class },
+    { label: 'SOXAI の指標値', unit: '', digits: 0, key: null, get: (x) => x.v.sleep_ahi_class, band: BREATH_OK },
   ];
   for (const def of defs) {
     const points = dates.map((d, i) => { const x = dayOf(d); return { x: i, y: x ? def.get(x) ?? null : null }; });
@@ -220,13 +224,13 @@ function breathTrend(box, ctx) {
     const today = points[points.length - 1].y;
     const mc = miniChart(def.label, today == null ? '—' : `${fmt(today)}${def.unit ? ` ${def.unit}` : ''}`);
     box.appendChild(mc.el);
-    // 帯は、自分の現在の平常範囲（中央値 ± ふだんのばらつき）。SOXAI の指標値には帯も判定も付けない
+    // 帯は、自分の現在の平常範囲（中央値 ± ふだんのばらつき）。SOXAI の指標値だけは、SOXAI の目安の「許容範囲」を帯にする
     const base = def.key && ctx.result ? ctx.result.metrics[def.key].base : null;
     lineChart(mc.box, {
       height: 84, ariaLabel: `${def.label}の夜ごとの推移`, emptyText: 'この期間の記録はありません',
       x: { min: 0, max: dates.length - 1, ticks: indexTicks(dates, 4), format: (i) => `${shortDate(dates[i])}(${weekdayOf(dates[i])})` },
       y: { format: fmt, floor0: true },
-      band: base && base.ready ? { lo: base.median - base.spread, hi: base.median + base.spread } : null,
+      band: def.band || (base && base.ready ? { lo: base.median - base.spread, hi: base.median + base.spread } : null),
       series: [{ name: def.label, tone: 'accent', points }],
     });
   }
@@ -235,28 +239,29 @@ function breathTrend(box, ctx) {
 function breathingCard(ctx) {
   const { day } = ctx;
   const v = day.v;
+  const band = soxaiBreathingBand(v.sleep_ahi_class);
   const tiles = h('div', { class: 'tiles' },
     statTile('血中酸素の平均', unitValue(v.sleep_spo2_mean == null ? '—' : fmtNum(v.sleep_spo2_mean, Number.isInteger(v.sleep_spo2_mean) ? 0 : 1), '%'),
       v.sleep_spo2_min != null ? `最低 ${fmtInt(v.sleep_spo2_min)}%` : null),
     statTile('呼吸数', unitValue(v.sleep_respiration_rate_mean == null ? '—' : fmtNum(v.sleep_respiration_rate_mean, 1), '回/分')),
     statTile('酸素低下の指標', day.nightOdi == null ? '—' : fmtNum(day.nightOdi, 1), '5分ごとの値の夜間平均'),
-    statTile('SOXAI の指標値', v.sleep_ahi_class == null ? '—' : fmtInt(v.sleep_ahi_class), '届いた値のまま'));
+    statTile('SOXAI の指標値', v.sleep_ahi_class == null ? '—' : fmtInt(v.sleep_ahi_class), band ? `区分: ${band.label}` : null));
   const trendBox = h('div');
   ctx.mount(() => breathTrend(trendBox, ctx));
   const nightFold = fold('この夜の推移', (box) => box.appendChild(asyncBox(ctx.loadNight(ctx.date), renderBreathNight)));
   const dates = lastDates(ctx.date, BREATH_NIGHTS);
   return chartCard({ title: '睡眠時の呼吸', sub: 'この夜の値と、夜ごとの推移です。',
-    tableSpec: () => ({ columns: ['日付', '血中酸素', '呼吸数', '酸素低下', 'SOXAI の値'],
+    tableSpec: () => ({ columns: ['日付', '血中酸素', '呼吸数', '酸素低下', 'SOXAI の値', '区分'],
       rows: dates.map((d) => { const x = ctx.state.days.get(d);
-        return !x || !x.hasNight ? [shortDate(d), null, null, null, null]
-          : [shortDate(d), x.v.sleep_spo2_mean, x.v.sleep_respiration_rate_mean, x.nightOdi == null ? null : fmtNum(x.nightOdi, 1), x.v.sleep_ahi_class]; }).reverse() }) },
+        return !x || !x.hasNight ? [shortDate(d), null, null, null, null, null]
+          : [shortDate(d), x.v.sleep_spo2_mean, x.v.sleep_respiration_rate_mean, x.nightOdi == null ? null : fmtNum(x.nightOdi, 1), x.v.sleep_ahi_class, (soxaiBreathingBand(x.v.sleep_ahi_class) || {}).label ?? null]; }).reverse() }) },
   tiles,
   h('p', { class: 'explain' },
-    'SOXAI は、睡眠中に血中酸素が下がった回数（1時間あたり）をもとに、「平常・許容範囲・乱れあり・大きな乱れ」の4段階で評価しています（SOXAI の公式の説明）。その夜がどの段階だったかは、SOXAI アプリの「睡眠時無呼吸の傾向」で確認できます。'),
+    `「SOXAI の指標値」は、SOXAI アプリの「睡眠時無呼吸の傾向」の元になっている値です。睡眠中に血中酸素が下がった回数をもとにしていて、SOXAI アプリの目安では、${BREATH_NOTE}です。区分は、この目安を当てはめたものです。`),
   h('p', { class: 'explain' },
-    '「SOXAI の指標値」と「酸素低下の指標」は、SOXAI から届いた値をそのまま載せています。これらの値が4段階のどれに当たるかは、数夜分の記録で照合している途中です。確認できるまで、このアプリでは段階や回数への読み替え、良し悪しの判定をしません。'),
+    '「酸素低下の指標」は、5分ごとの値の夜間平均で、上の区分とは別の値です。どちらも健康管理の参考用で、診断ではありません。気になる状態が続く時は、医療機関に相談してください。'),
   h('h3', { class: 'subhead' }, `夜ごとの推移（直近${BREATH_NIGHTS}夜）`),
-  h('p', { class: 'sub' }, '薄い帯は、自分の現在の平常範囲です。'),
+  h('p', { class: 'sub' }, `薄い帯は、自分の現在の平常範囲です（SOXAI の指標値は、SOXAI の目安の「${BREATH_BANDS[2].label}」の範囲）。`),
   trendBox,
   nightFold.el);
 }

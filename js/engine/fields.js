@@ -81,7 +81,7 @@ export const DAILY_FIELDS = {
   sleep_spo2_min: f('睡眠中の血中酸素の最低', 'C', 'MISS'),
   sleep_spo2_max: f('睡眠中の血中酸素の最高', '', 'MISS', '分析には使わない'),
   sleep_debt: f('睡眠負債（SOXAI算出）', 'S', 'NIGHT', '負債なしは 0。算出方法が仕様書に無いので独自計算と並べて確認する'),
-  sleep_ahi_class: f('無呼吸低呼吸の指標の最大', 'C', 'NIGHT', '0 は区分の最小。参考表示のみで、判定の文言には使わない。SOXAI アプリの4段階評価との対応は照合中'),
+  sleep_ahi_class: f('無呼吸低呼吸の指標の最大', 'C', 'NIGHT', '0 は区分の最小。SOXAI アプリの「睡眠時無呼吸の傾向」の目安（2未満 素晴らしい / 5未満 とても良い / 15未満 許容範囲 / 15以上 注意）を当てはめると、アプリの表示と一致する'),
   sleep_respiration_rate_mean: f('睡眠中の呼吸数の平均', 'C', 'MISS', '体調変化の材料'),
   utc_offset_mins: f('UTCとの時差（分）', 'M', 'ANY', '旅行時の時差の検知に使う'),
 };

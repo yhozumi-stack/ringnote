@@ -22,6 +22,7 @@ export { CONFIG } from './config.js';
 export { normalizeDaily, normalizeEpochs, decodeStage1min } from './normalize.js';
 export { nightFeatures, STAGE_NAMES, STAGE_LABELS } from './features.js';
 export { awakeEpochs, stressDayStats, stressAnalysis, soxaiStressBand } from './stress.js';
+export { soxaiBreathingBand } from './breathing.js';
 export { DAILY_FIELDS, DETAIL_FIELDS } from './fields.js';
 export { SUBJECTIVE_FIELDS, FIELD_GROUPS, COLD_SYMPTOMS, optionLabel, sanitizeSubjective, fieldsOf, missingFields, hadCaffeine, energyCaffeineMg, lastCaffeineAt, lastTimeAt, trainingGapMin, trainingGapBand, iqosGapMin, iqosGapBand, iqosRelativeBand, iqosInputDays, countBand } from './subjective.js';
 export { OUTCOMES, COMPARISONS, groupCompare, allComparisons, coldEpisodes, sampleLevel } from './insights.js';

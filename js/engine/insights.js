@@ -27,6 +27,8 @@ export const OUTCOMES = {
   sleep: { label: '睡眠時間', unit: '分', digits: 0, base: true, get: diffOf('sleep') },
   eff: { label: '睡眠効率', unit: '', digits: 1, base: true, get: diffOf('eff') },
   latency: { label: '寝つくまで', unit: '分', digits: 0, base: true, get: diffOf('latency') },
+  // 睡眠時の呼吸の指標値（SOXAI の sleep_ahi_class。アプリの「睡眠時無呼吸の傾向」の元の値。小さいほど良い）
+  ahi: { label: '睡眠時の呼吸の指標値', unit: '', digits: 0, get: (r, d) => (d.hasNight ? d.v.sleep_ahi_class ?? null : null) },
   soxaiStress: { label: 'SOXAI のストレス値', unit: '', digits: 0, get: (r, d) => d.v.health_stress ?? null },
   // 前日の行動や前日のストレスと組み合わせる時は、同じ「前日」の SOXAI の値を見る
   soxaiStressPrev: { label: '前日の SOXAI ストレス値', unit: '', digits: 0, get: (r, d, days) => { const p = days && days.get(addDays(d.date, -1)); return p ? p.v.health_stress ?? null : null; } },
@@ -38,7 +40,7 @@ export const OUTCOMES = {
 };
 
 const SLEEP_SET = ['latency', 'sleep', 'eff', 'hrv', 'hr'];
-const IQOS_SET = ['hrv', 'hr', 'latency', 'eff', 'sleep', 'soxaiStressPrev'];
+const IQOS_SET = ['hrv', 'hr', 'latency', 'eff', 'sleep', 'ahi', 'soxaiStressPrev'];
 const byValue = (field) => (d) => (sub(d)[field] == null ? null : [String(sub(d)[field])]);
 
 /**
@@ -46,7 +48,7 @@ const byValue = (field) => (d) => (sub(d)[field] == null ? null : [String(sub(d)
  * 1日が2つの組に入ることがある（飲酒の「あり」と「うち多め」）。
  */
 export const COMPARISONS = [
-  { key: 'alcohol', title: '飲酒', outcomes: ['hrv', 'hr', 'temp', 'sleep', 'eff'],
+  { key: 'alcohol', title: '飲酒', outcomes: ['hrv', 'hr', 'temp', 'sleep', 'eff', 'ahi'],
     groups: [['none', 'なし'], ['any', 'あり'], ['much', 'うち多め']],
     pick: (d) => { const v = sub(d).alcohol; return v == null ? null : v === 'none' ? ['none'] : v === 'much' ? ['any', 'much'] : ['any']; } },
   { key: 'coffee', title: 'コーヒーの杯数', outcomes: SLEEP_SET,
