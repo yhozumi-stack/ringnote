@@ -1,7 +1,9 @@
 // ストレス（日中）。設計書 3.3。
 //
-// v1 で表示するのは、SOXAI のストレス値を「自分の直近14日の分布」で相対的に 高・中・低 に分けたもの。
-// 尺度の定義が公開されていないので「回復」とは呼ばない。LF/HF は使わない。
+// 表示するのは2つ。
+// - SOXAI の目安での区分（低い・標準・高い）。SOXAI アプリ内の説明にある区切りを、そのまま当てはめる（config の soxaiBands）
+// - 自分の直近14日の分布での相対的な区分（高・中・低）。7日分たまってから出す
+// SOXAI のストレス値は、心拍変動（RMSSD と LF/HF）から SOXAI が算出した 0〜100 の値。ここでは LF/HF を独自には使わない。
 // 独自の指標（心拍の上昇と心拍変動の低下）は裏で計算して比べるだけで、採否は実データを見て決める。
 
 import { localHour, median, robustSpread, quantileFromHistogram } from './util.js';
@@ -79,13 +81,40 @@ function pearson(xs, ys) {
  * @param {object[]} priorStats 当日より前の stressDayStats()（直近14日分。順不同でよい）
  * @param {object} p { offset, cfg }
  */
+/** SOXAI の目安での区分: 'low' 低い（0〜30）/ 'standard' 標準（31〜50未満）/ 'high' 高い（50以上）。値が無ければ null */
+export function soxaiStressBand(value, cfg) {
+  if (value == null || !Number.isFinite(value)) return null;
+  const b = cfg.stress.soxaiBands;
+  return value >= b.highMin ? 'high' : value <= b.lowMax ? 'low' : 'standard';
+}
+
+/** 起きている時間を、SOXAI の目安で分けた時間（分）。SOXAI アプリと同じく、運動中の枠も数える */
+function soxaiSummary(awake, cfg) {
+  const minutes = { low: 0, standard: 0, high: 0 };
+  let run = 0; let longest = 0; let lastT = null;
+  for (const e of awake) {
+    const band = soxaiStressBand(e.stress, cfg);
+    if (band) minutes[band] += 5;
+    if (band === 'high') {
+      run = lastT != null && e.t - lastT <= 300000 ? run + 5 : 5; // 5分枠が途切れずに続いている間だけ連続として数える
+      lastT = e.t;
+      longest = Math.max(longest, run);
+    } else {
+      run = 0;
+      lastT = null;
+    }
+  }
+  return { minutes, measuredMin: minutes.low + minutes.standard + minutes.high, longestHighMin: longest };
+}
+
 export function stressAnalysis(awake, priorStats, { offset, cfg }) {
   const sc = cfg.stress;
   const usable = (priorStats || []).filter((s) => s && s.n >= sc.minEpochsPerDay);
   const rest = awake.filter((e) => e.state === 'rest' && e.stress != null);
   const exerciseMin = awake.filter((e) => e.state === 'exercise').length * 5;
   const cooldownMin = awake.filter((e) => e.state === 'cooldown').length * 5;
-  const base = { exerciseMin, cooldownMin, measuredMin: rest.length * 5, daysInBaseline: usable.length, daysNeeded: sc.minDays };
+  const base = { exerciseMin, cooldownMin, measuredMin: rest.length * 5, daysInBaseline: usable.length, daysNeeded: sc.minDays,
+    soxai: soxaiSummary(awake, cfg) };
 
   let low = null; let high = null;
   if (usable.length >= sc.minDays) {
@@ -100,7 +129,7 @@ export function stressAnalysis(awake, priorStats, { offset, cfg }) {
     if (e.stress == null || !zoned) return null;
     return e.stress >= high ? 'high' : e.stress <= low ? 'low' : 'mid';
   };
-  const series = awake.map((e) => ({ t: e.t, stress: e.stress, zone: zoneOf(e) }));
+  const series = awake.map((e) => ({ t: e.t, stress: e.stress, zone: zoneOf(e), soxai: soxaiStressBand(e.stress, cfg) }));
   const own = ownIndex(awake, usable, cfg);
 
   if (!zoned) {

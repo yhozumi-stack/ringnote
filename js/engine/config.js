@@ -140,6 +140,9 @@ export const CONFIG = {
 
   // ---- 3.3 ストレス ----
   stress: {
+    // SOXAI アプリの「ストレスモニター」の目安（アプリ内の説明による。0〜30 低い / 31〜50未満 標準 / 50以上 高い）。
+    // 2026-10-09 に、アプリに出る値と API の値（health_stress）が同じであることを確認した
+    soxaiBands: { lowMax: 30, highMin: 50, labels: { low: '低い', standard: '標準', high: '高い' } },
     windowDays: 14,
     minDays: 7,                // 7日たまるまでは区分しない
     minEpochsPerDay: 24,       // その日を分布の材料にする最少の5分枠（2時間分）
