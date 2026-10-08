@@ -198,7 +198,7 @@ export function demoSubjective(today) {
     const rec = {
       condition: sick ? 'bad' : tired ? 'normal' : r() < 0.55 ? 'good' : 'normal',
       fatigue: sick || sc === 'short' ? 'high' : life.training === 'hard' && r() < 0.5 ? 'high' : r() < 0.5 ? 'low' : 'normal',
-      soreness: life.training === 'hard' ? (r() < 0.8 ? 'high' : 'normal') : life.training === 'normal' ? 'normal' : 'low',
+      soreness: life.training === 'hard' ? (r() < 0.8 ? 'high' : 'normal') : life.training === 'normal' ? 'normal' : life.training === 'light' ? 'low' : 'none',
       cold: sick ? 'yes' : 'none',
       mental: life.mental,
       alcohol: sc === 'drink' ? (ordinal(date) % 2 ? 'some' : 'much') : 'none',

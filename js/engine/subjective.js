@@ -24,7 +24,8 @@ export const FIELD_GROUPS = [
 export const SUBJECTIVE_FIELDS = {
   condition: { group: 'state', label: '体調', options: [['good', '良い'], ['normal', '普通'], ['bad', '悪い']] },
   fatigue: { group: 'state', label: '疲労感', options: [['low', '少ない'], ['normal', '普通'], ['high', '強い']] },
-  soreness: { group: 'state', label: '筋肉痛', options: [['low', '少ない'], ['normal', '普通'], ['high', '強い']] },
+  // 筋肉痛は「まったく無い」日がふつうなので、「なし」と「少ない」を分ける（2026-10-08 に4段階にした。それ以前の「少ない」には「なし」の日も含まれる）
+  soreness: { group: 'state', label: '筋肉痛', options: [['none', 'なし'], ['low', '少ない'], ['normal', '普通'], ['high', '強い']] },
   cold: { group: 'state', label: '風邪っぽい症状', options: [['none', 'なし'], ['slight', '少し'], ['yes', 'あり']] },
   mental: { group: 'behavior', label: '昨日の精神的ストレス', short: '昨日のストレス', options: [['low', '低い'], ['normal', '普通'], ['high', '高い']] },
   alcohol: { group: 'behavior', label: '飲酒', options: [['none', 'なし'], ['some', '少量'], ['much', '多め']] },

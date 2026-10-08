@@ -32,6 +32,7 @@ export const OUTCOMES = {
   soxaiStressPrev: { label: '前日の SOXAI ストレス値', unit: '', digits: 0, get: (r, d, days) => { const p = days && days.get(addDays(d.date, -1)); return p ? p.v.health_stress ?? null : null; } },
   score: { label: 'コンディションの点数', unit: '', digits: 0, get: (r) => (r.recovery.status === 'ok' ? r.recovery.score : null) },
   fatigueHigh: { label: '疲労感が「強い」', share: true, get: (r, d) => (sub(d).fatigue == null ? null : sub(d).fatigue === 'high') },
+  sorenessAny: { label: '筋肉痛あり（少ない以上）', share: true, get: (r, d) => (sub(d).soreness == null ? null : sub(d).soreness !== 'none') },
   sorenessHigh: { label: '筋肉痛が「強い」', share: true, get: (r, d) => (sub(d).soreness == null ? null : sub(d).soreness === 'high') },
   detected: { label: '体調の変化を検出', share: true, get: (r) => (judged(r) ? r.radar.level !== 'none' : null) },
 };
@@ -68,7 +69,7 @@ export const COMPARISONS = [
   { key: 'iqosLast', title: '最後に IQOS を吸った時刻', outcomes: IQOS_SET,
     groups: [['zero', '吸わなかった'], ...CONFIG.lifelog.iqosGapBands.map((b) => [b.key, b.label])],
     pick: (d, cfg) => { const b = iqosGapBand(d, cfg); return b ? [b] : null; } },
-  { key: 'training', title: '前日の筋トレ負荷', outcomes: ['hrv', 'hr', 'fatigueHigh', 'sorenessHigh'],
+  { key: 'training', title: '前日の筋トレ負荷', outcomes: ['hrv', 'hr', 'fatigueHigh', 'sorenessAny', 'sorenessHigh'],
     groups: [['none', 'なし'], ['light', '軽い'], ['normal', '普通'], ['hard', '強い']], pick: byValue('training') },
   { key: 'trainingEnd', title: '筋トレを終えた時刻', outcomes: ['latency', 'hr', 'hrv', 'temp', 'sleep', 'eff'],
     groups: [['zero', 'しなかった'], ...CONFIG.lifelog.trainingGapBands.map((b) => [b.key, b.label])],
