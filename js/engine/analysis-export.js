@@ -131,7 +131,7 @@ export function analysisExportCsv(exp) {
   const rawKeys = new Set();
   for (const d of exp.days) for (const k of Object.keys(d.soxai_daily || {})) rawKeys.add(k);
   const raws = [...rawKeys].sort();
-  const life = [...Object.keys(SUBJECTIVE_FIELDS), 'coldSymptoms', 'caffeineLast', 'iqosLast', 'trainingEnd'];
+  const life = [...Object.keys(SUBJECTIVE_FIELDS), 'coldSymptoms', 'caffeineLast', 'iqosLast', 'trainingEnd', 'alcoholOut'];
   const metricKeys = Object.keys(exp.dictionary.metrics);
   const header = ['date', ...raws.map((k) => `soxai_${k}`), ...life.map((k) => `lifelog_${k}`),
     'night_class', 'baseline_eligible', 'night_skin_temp_median', 'night_odi_mean', 'min_hr_position', 'iqos_minutes_before_sleep', 'energy_caffeine_mg',

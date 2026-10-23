@@ -3,7 +3,7 @@
 
 import { h, fmtInt, fmtNum, fmtMinutes, fmtHM, fmtSigned, shortDate, weekdayOf, dateLabel, addDays } from '../ui.js';
 import { lineChart, dataTable } from '../charts.js';
-import { OUTCOMES, COMPARISONS, COLD_SYMPTOMS, groupCompare, coldEpisodes, optionLabel, CONFIG } from '../engine/index.js';
+import { OUTCOMES, COMPARISONS, COLD_SYMPTOMS, groupCompare, coldEpisodes, optionLabel, drankAlcohol, CONFIG } from '../engine/index.js';
 import { card, chip, chartCard, miniChart, segmented, fold, lastDates, indexTicks } from './parts.js';
 import { signed } from './metrics.js';
 
@@ -93,7 +93,7 @@ function tagChips(sub) {
   if (!sub) return [];
   const out = [];
   if (sub.cold === 'slight' || sub.cold === 'yes') out.push(chip(`風邪っぽい症状 ${optionLabel('cold', sub.cold)}`));
-  if (sub.alcohol === 'some' || sub.alcohol === 'much') out.push(chip(`飲酒 ${optionLabel('alcohol', sub.alcohol)}`));
+  if (drankAlcohol(sub)) out.push(chip(`飲酒 ${optionLabel('alcohol', sub.alcohol).replace('（以前の入力）', '')}${sub.alcoholOut ? '（外）' : ''}`));
   if (sub.condition === 'bad') out.push(chip('体調 悪い'));
   return out;
 }

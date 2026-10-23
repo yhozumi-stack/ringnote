@@ -28,7 +28,10 @@ export const SUBJECTIVE_FIELDS = {
   soreness: { group: 'state', label: '筋肉痛', options: [['none', 'なし'], ['low', '少ない'], ['normal', '普通'], ['high', '強い']] },
   cold: { group: 'state', label: '風邪っぽい症状', options: [['none', 'なし'], ['slight', '少し'], ['yes', 'あり']] },
   mental: { group: 'behavior', label: '昨日の精神的ストレス', short: '昨日のストレス', options: [['low', '低い'], ['normal', '普通'], ['high', '高い']] },
-  alcohol: { group: 'behavior', label: '飲酒', options: [['none', 'なし'], ['some', '少量'], ['much', '多め']] },
+  // 飲酒は、ロング缶（500mL）を基準にした4段階（2026-10-23〜）。外で飲んだ日は、お店の杯数の目安で選ぶ（today.js の ALCOHOL_GUIDE）。
+  // 以前の3段階（少量・多め）は、記録を読むためだけに残す（選択肢には出さない。比べる時は「飲んだ日」として扱う）
+  alcohol: { group: 'behavior', label: '飲酒', options: [['none', 'なし'], ['one', '1本くらい'], ['two', '2本くらい'], ['lots', 'たくさん']],
+    legacyOptions: [['some', '少量（以前の入力）'], ['much', '多め（以前の入力）']] },
   training: { group: 'behavior', label: '前日の筋トレ負荷', options: [['none', 'なし'], ['light', '軽い'], ['normal', '普通'], ['hard', '強い']] },
   coffee: { group: 'behavior', label: 'コーヒー', unit: '杯', kind: 'count', min: 0, max: 99, quick: [0, 1, 2, 3] },
   energy: { group: 'behavior', label: 'エナジードリンク', unit: '本', kind: 'count', min: 0, max: 99, quick: [0, 1, 2] },
@@ -46,12 +49,17 @@ export function optionLabel(field, value, { long = false } = {}) {
   const def = SUBJECTIVE_FIELDS[field];
   if (!def) return null;
   if (def.kind === 'count') return validCount(def, value) ? `${value}${def.unit}` : null;
-  const i = def.options.findIndex(([v]) => v === value);
+  const all = [...def.options, ...(def.legacyOptions || [])];
+  const i = all.findIndex(([v]) => v === value);
   if (i < 0) return null;
-  return long && def.long ? def.long[i] : def.options[i][1];
+  return long && def.long && i < def.options.length ? def.long[i] : all[i][1];
 }
 
 const validCount = (def, v) => Number.isInteger(v) && v >= def.min && v <= def.max;
+const validOption = (def, v) => def.options.some(([x]) => x === v) || (def.legacyOptions || []).some(([x]) => x === v);
+
+/** 飲んだと入力されているか（以前の3段階の「少量」「多め」も含む）。未入力なら false */
+export const drankAlcohol = (s) => !!s && s.alcohol != null && s.alcohol !== 'none';
 
 /** カフェインを摂ったと入力されているか（コーヒーかエナジードリンクが1以上） */
 export const hadCaffeine = (s) => !!s && ((s.coffee ?? 0) > 0 || (s.energy ?? 0) > 0);
@@ -73,7 +81,7 @@ export function sanitizeSubjective(raw) {
   const out = {};
   for (const [field, def] of Object.entries(SUBJECTIVE_FIELDS)) {
     if (def.kind === 'count') { if (validCount(def, raw[field])) out[field] = raw[field]; continue; }
-    if (def.options.some(([v]) => v === raw[field])) out[field] = raw[field];
+    if (validOption(def, raw[field])) out[field] = raw[field];
   }
   if ((out.cold === 'slight' || out.cold === 'yes') && Array.isArray(raw.coldSymptoms)) {
     const symptoms = SYMPTOM_KEYS.filter((k) => raw.coldSymptoms.includes(k));
@@ -82,6 +90,8 @@ export function sanitizeSubjective(raw) {
   // 最後に摂った時刻は、摂った日だけ意味がある
   if (hadCaffeine(out) && typeof raw.caffeineLast === 'string' && TIME_RE.test(raw.caffeineLast)) out.caffeineLast = raw.caffeineLast;
   if ((out.iqos ?? 0) > 0 && typeof raw.iqosLast === 'string' && TIME_RE.test(raw.iqosLast)) out.iqosLast = raw.iqosLast;
+  // 「外で飲んだ」の印は、飲んだ日だけ意味がある
+  if (drankAlcohol(out) && raw.alcoholOut === true) out.alcoholOut = true;
   // 筋トレを終えた時刻は、筋トレをした日（負荷が「なし」以外）だけ意味がある
   if (out.training && out.training !== 'none' && typeof raw.trainingEnd === 'string' && TIME_RE.test(raw.trainingEnd)) out.trainingEnd = raw.trainingEnd;
   return Object.keys(out).length ? out : null;
@@ -203,11 +213,12 @@ export function trainingGapBand(day, cfg = CONFIG) {
 export function contextNotes({ subjective, metrics, radar }) {
   const out = [];
   if (!subjective) return out;
-  if (subjective.alcohol === 'some' || subjective.alcohol === 'much') {
+  if (drankAlcohol(subjective)) {
     const z = (key) => (metrics[key] && metrics[key].dev ? metrics[key].dev.z : 0);
     const moved = z('hrv') <= -1 || z('hr') >= 1 || z('temp') >= 1 || (radar && radar.level !== 'none');
     if (moved) {
-      out.push({ key: 'alcohol', text: `昨夜は飲酒（${optionLabel('alcohol', subjective.alcohol)}）の記録があります。心拍変動・睡眠中の心拍・皮膚温は、飲酒でも同じ向きに動きます。` });
+      const label = optionLabel('alcohol', subjective.alcohol).replace('（以前の入力）', '');
+      out.push({ key: 'alcohol', text: `昨夜は飲酒（${label}${subjective.alcoholOut ? '・外' : ''}）の記録があります。心拍変動・睡眠中の心拍・皮膚温は、飲酒でも同じ向きに動きます。` });
     }
   }
   return out;

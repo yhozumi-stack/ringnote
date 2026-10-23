@@ -5,7 +5,7 @@
 
 import { h, clock, fmtMinutes } from '../ui.js';
 import { ring } from '../charts.js';
-import { SUBJECTIVE_FIELDS, FIELD_GROUPS, COLD_SYMPTOMS, optionLabel, fieldsOf, missingFields, hadCaffeine, energyCaffeineMg } from '../engine/index.js';
+import { SUBJECTIVE_FIELDS, FIELD_GROUPS, COLD_SYMPTOMS, optionLabel, fieldsOf, missingFields, hadCaffeine, drankAlcohol, energyCaffeineMg } from '../engine/index.js';
 import { card, chip, segmented } from './parts.js';
 import * as data from '../data.js';
 import { metricRow } from './metrics.js';
@@ -140,6 +140,8 @@ function nightCard(ctx) {
 // まとまり（今日の状態 / 前日・昨夜の行動）の項目が全部入っている日は、1行の要約に畳む。
 const openState = new Map(); // `${日付}|${まとまり}` → 開いているか（この起動のあいだだけ覚える）
 const SHORT = { cold: '風邪っぽい症状', mental: '昨日のストレス', training: '筋トレ', energy: 'エナジードリンク' };
+// 飲酒の段階の目安（ロング缶 500mL が基準。お店のハイボール・サワーは、ロング缶の半分〜3分の2くらいのアルコール量）
+const ALCOHOL_GUIDE = '目安: 1本くらい＝ロング缶1本（350mL缶なら1〜2本）・お店で1〜2杯／2本くらい＝ロング缶2本・お店で3〜4杯／たくさん＝それ以上・飲み会';
 const moreOpen = new Set(); // `${日付}|${項目}` → 「4杯+」などを押して、数の入力欄を開いているか
 
 function summaryText(group, cur) {
@@ -147,6 +149,7 @@ function summaryText(group, cur) {
   if (group === 'behavior' && cur.caffeineLast) parts.push(`最後のカフェイン ${cur.caffeineLast}`);
   if (group === 'behavior' && cur.iqosLast) parts.push(`最後の IQOS ${cur.iqosLast}`);
   if (group === 'behavior' && cur.trainingEnd) parts.push(`筋トレ終了 ${cur.trainingEnd}`);
+  if (group === 'behavior' && cur.alcoholOut) parts.push('外で飲んだ');
   return parts.length ? parts.join('・') : 'まだ入力していません';
 }
 
@@ -237,6 +240,17 @@ function lifelogRows(ctx, group, cur) {
       if (mg) rows.push(h('p', { class: 'subjnote' }, `エナジードリンクのカフェインは約${mg}mg（1本120mgで換算）`));
     }
     if (field === 'iqos' && cur.iqos > 0) rows.push(timeRow(ctx, cur, 'iqosLast', '最後に吸った時刻', '最後に IQOS を吸った時刻'));
+    if (field === 'alcohol') {
+      if (cur.alcohol === 'some' || cur.alcohol === 'much') {
+        rows.push(h('p', { class: 'subjnote' }, `この日は以前の入力（${optionLabel('alcohol', cur.alcohol).replace('（以前の入力）', '')}）です。選び直すと、新しい段階で記録されます。`));
+      }
+      if (cur.alcohol == null || drankAlcohol(cur)) rows.push(h('p', { class: 'subjnote' }, ALCOHOL_GUIDE));
+      if (drankAlcohol(cur)) {
+        rows.push(h('div', { class: 'subjrow sub' }, h('span', { class: 'name' }, '外で飲んだ（任意）'),
+          h('button', { class: 'pill', type: 'button', 'aria-pressed': String(!!cur.alcoholOut),
+            onclick: () => ctx.actions.setLifeValue(ctx.date, 'alcoholOut', cur.alcoholOut ? null : true) }, 'はい')));
+      }
+    }
     if (field === 'training' && cur.training && cur.training !== 'none') rows.push(timeRow(ctx, cur, 'trainingEnd', '終えた時刻（任意）', '筋トレを終えた時刻'));
   }
   return rows;

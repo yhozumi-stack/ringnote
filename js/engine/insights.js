@@ -49,8 +49,17 @@ const byValue = (field) => (d) => (sub(d)[field] == null ? null : [String(sub(d)
  */
 export const COMPARISONS = [
   { key: 'alcohol', title: '飲酒', outcomes: ['hrv', 'hr', 'temp', 'sleep', 'eff', 'ahi'],
-    groups: [['none', 'なし'], ['any', 'あり'], ['much', 'うち多め']],
-    pick: (d) => { const v = sub(d).alcohol; return v == null ? null : v === 'none' ? ['none'] : v === 'much' ? ['any', 'much'] : ['any']; } },
+    // 以前の3段階（少量・多め）の日は「あり」だけに入れる（量の段階には入れない）
+    groups: [['none', 'なし'], ['any', 'あり'], ['one', '1本くらい'], ['two', '2本くらい'], ['lots', 'たくさん'], ['out', 'うち外で']],
+    pick: (d) => {
+      const s = sub(d); const v = s.alcohol;
+      if (v == null) return null;
+      if (v === 'none') return ['none'];
+      const g = ['any'];
+      if (v === 'one' || v === 'two' || v === 'lots') g.push(v);
+      if (s.alcoholOut) g.push('out');
+      return g;
+    } },
   { key: 'coffee', title: 'コーヒーの杯数', outcomes: SLEEP_SET,
     groups: CONFIG.lifelog.coffeeBands.map((b) => [b.key, b.label]),
     pick: (d, cfg) => { const b = countBand(sub(d).coffee ?? null, cfg.lifelog.coffeeBands); return b ? [b] : null; } },

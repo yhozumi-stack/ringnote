@@ -36,7 +36,8 @@ export function exportLifelogJson(map, { exportedAt = null, timezone = null, utc
   for (const [key, def] of Object.entries(SUBJECTIVE_FIELDS)) {
     fields[key] = def.kind === 'count'
       ? { label: def.label, group: def.group, kind: 'count', unit: def.unit, min: def.min, max: def.max, note: '実際の数を整数で保存（丸めていない）' }
-      : { label: def.label, group: def.group, options: def.options.map(([value], i) => ({ value, label: def.long ? def.long[i] : def.options[i][1] })) };
+      : { label: def.label, group: def.group, options: def.options.map(([value], i) => ({ value, label: def.long ? def.long[i] : def.options[i][1] })),
+        ...(def.legacyOptions ? { legacy_options: def.legacyOptions.map(([value, label]) => ({ value, label })) } : {}) };
   }
   return JSON.stringify({
     format: LIFELOG_FORMAT,
@@ -51,6 +52,7 @@ export function exportLifelogJson(map, { exportedAt = null, timezone = null, utc
     caffeineLast: '最後にカフェインを摂った時刻（HH:MM）',
     iqosLast: '最後に IQOS を吸った時刻（HH:MM）',
     trainingEnd: '筋トレを終えた時刻（HH:MM）。筋トレ負荷が「なし」以外の日だけ',
+    alcoholOut: '外で飲んだ日は true（飲んだ日だけ。印を付けなかった日はキーを持たない）',
     days: cleanDays(map),
   }, null, 1);
 }
@@ -63,7 +65,7 @@ function csvCell(v) {
 /** CSV で書き出す（表計算ソフトで文字化けしないよう、先頭に BOM を付ける）。値は日本語の表記 */
 export function exportLifelogCsv(map) {
   const symptomLabel = new Map(COLD_SYMPTOMS);
-  const header = ['日付', ...FIELD_KEYS.map((k) => SUBJECTIVE_FIELDS[k].label), '症状の内容', '最後にカフェインを摂った時刻', 'エナジードリンクのカフェイン量(mg)', '最後に IQOS を吸った時刻', '筋トレを終えた時刻'];
+  const header = ['日付', ...FIELD_KEYS.map((k) => SUBJECTIVE_FIELDS[k].label), '症状の内容', '最後にカフェインを摂った時刻', 'エナジードリンクのカフェイン量(mg)', '最後に IQOS を吸った時刻', '筋トレを終えた時刻', '外で飲んだ'];
   const lines = [header.map(csvCell).join(',')];
   for (const day of cleanDays(map)) {
     lines.push([
@@ -74,6 +76,7 @@ export function exportLifelogCsv(map) {
       energyCaffeineMg(day) ?? '',
       day.iqosLast || '',
       day.trainingEnd || '',
+      day.alcoholOut ? '外' : '',
     ].map(csvCell).join(','));
   }
   return `﻿${lines.join('\r\n')}\r\n`;
